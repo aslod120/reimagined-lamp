@@ -2,6 +2,7 @@
 #include "network.h"
 #include <stdlib.h>
 #include <string.h>
+#include "UIButtons.h"
 #define MAX_DATA_LENGTH 80
 
 //------------------------------------------------------------------------------------
@@ -16,6 +17,12 @@ void resetString(char *string)
     }
 }
 
+typedef enum GameState
+{
+    menu = 0,
+    game = 1
+}GameState;
+
 int main(void)
 {
     // Initialization
@@ -23,9 +30,9 @@ int main(void)
     const int screenWidth = 800;
     const int screenHeight = 450;
     
-    if(network_connect() != 0)
+    if(network_initialize() == 0)
     {
-        return 1;
+        return 1; // exit the program
     }
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
@@ -38,6 +45,8 @@ int main(void)
     char *token = NULL;
     Vector2 p2MousePos = {0};
 
+    GameState gameState = menu;
+
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
@@ -46,20 +55,24 @@ int main(void)
         // TODO: Update your variables here
         //----------------------------------------------------------------------------------
 
-        mousePos = GetMousePosition();
-
-        network_sendPacket(TextFormat("%.0f#%.0f", mousePos.x, mousePos.y));
-
-        if(network_process(data))
+        if(gameState == game)
         {
-            token = strtok(data, "#");
-            p2MousePos.x = atof(token);
-            token = strtok(NULL, "#");
-            p2MousePos.y = atof(token);
-            while(token != NULL)
+            mousePos = GetMousePosition();
+
+            network_sendData(TextFormat("%.0f#%.0f", mousePos.x, mousePos.y));
+             
+            if(network_getEvents(data) == 3)
             {
+                token = strtok(data, "#");
+                p2MousePos.x = atof(token);
                 token = strtok(NULL, "#");
+                p2MousePos.y = atof(token);
+                while(token != NULL)
+                {
+                    token = strtok(NULL, "#");
+                }
             }
+            
         }
 
         // Draw
@@ -68,9 +81,35 @@ int main(void)
 
             ClearBackground(RAYWHITE);
 
-            DrawRectangleV(mousePos, (Vector2){10,10}, RED);
-            DrawRectangleV(p2MousePos, (Vector2){10,10}, BLUE);
-            DrawText(TextFormat("%.0f:%.0f", p2MousePos.x, p2MousePos.y), 0, 20, 20, RED);
+            if(gameState == menu)
+            {
+                if(drawButton((Rectangle){50, screenHeight/2, 160, 30}, "Become Client", GetFontDefault(), 20))
+                {
+                    if(network_connect("192.168.1.27", 1234) == 1)
+                    {
+                        gameState = game;
+                    }
+                }
+                if(drawButton((Rectangle){50, screenHeight/2 - 60, 160, 30}, "Become Server", GetFontDefault(), 20))
+                {
+                    if(network_createServer("192.168.1.27", 1234) == 1)
+                    {
+                        gameState = game;
+                    }
+                }
+            }
+            else if(gameState == game)
+            {
+                DrawRectangleV(mousePos, (Vector2){10,10}, RED);
+                DrawRectangleV(p2MousePos, (Vector2){10,10}, BLUE);
+                DrawText(TextFormat("%.0f:%.0f", p2MousePos.x, p2MousePos.y), 0, 20, 20, RED);
+
+                if(drawButton((Rectangle){50, screenHeight/2, 160, 30}, "Disconnect", GetFontDefault(), 20))
+                {
+                    network_disconnect();
+                    gameState = menu;
+                }
+            }
 
             DrawFPS(0,0);
 
@@ -81,7 +120,6 @@ int main(void)
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
-    network_disconnect();
     network_deinitialize();
     //--------------------------------------------------------------------------------------
 
