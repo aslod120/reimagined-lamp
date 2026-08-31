@@ -9,6 +9,7 @@
 
 /*** change the max clients number here to change how many clients the server allows ***/
 #define MAX_CLIENTS 32
+#define CHANNEL_COUNT 2
 
 void addClient(ENetPeer *newClient);
 void removeClient(ENetPeer *removeClient);
@@ -23,6 +24,10 @@ ENetAddress address = {0};
 ENetEvent event = {0};
 ENetPeer *peer = {0};
 ENetPacket *packet = {0};
+
+unsigned int num_events[10] = {0};
+unsigned int num_averageEvents = 0;
+int iterator = 0;
 
 // keeping track if we are a server or a client
 /*
@@ -83,8 +88,8 @@ int network_createServer(const char *IPAddress, const int port)
     }
     enet_address_set_host(&address, IPAddress);
     address.port = port;
-
-    server_or_client = enet_host_create(&address, MAX_CLIENTS, 1, 0, 0);
+    // setup the the server information
+    server_or_client = enet_host_create(&address, MAX_CLIENTS, CHANNEL_COUNT, 0, 0);
     if(server_or_client == NULL)
     {
     	fprintf(stderr, "An error occurred while trying to create an ENet server!\n");
@@ -105,7 +110,7 @@ int network_connect(const char *IPAddress, const int port)
         return b_server_or_client;
     }
     // setup the the client information
-    server_or_client = enet_host_create(NULL, 1, 1, 0, 0);
+    server_or_client = enet_host_create(NULL, 1, CHANNEL_COUNT, 0, 0);
     if(server_or_client == NULL)
     {
     	fprintf(stderr, "An error occurred while trying to create an ENet client host!\n");
@@ -116,7 +121,7 @@ int network_connect(const char *IPAddress, const int port)
     address.port = port;
 
     // attempted to connect to the server
-    peer = enet_host_connect(server_or_client, &address, 1, 0);
+    peer = enet_host_connect(server_or_client, &address, CHANNEL_COUNT, 0);
     if(peer == NULL)
     {
         // failed connecting due to no servers available with this IP address and port
@@ -150,7 +155,7 @@ void network_sendData(const char *data)
     packet = enet_packet_create(data, strlen(data) + 1, ENET_PACKET_FLAG_RELIABLE);
     if(b_server_or_client == -1) // we are a server sending info to our clients
     {
-        enet_host_broadcast(server_or_client, 0, packet);
+        enet_host_broadcast(server_or_client, 1, packet);
     }
     else if(b_server_or_client == -2) // sending info from client to server
     {
@@ -166,14 +171,16 @@ void network_sendData(const char *data)
 //  * 3 if we received a packet -> this packet data will be stored in "storeData"
 int network_getEvents(char *storeData)
 {
-    if(enet_host_service(server_or_client, &event, 0) > 0)
+    int message = ENET_EVENT_TYPE_NONE;
+    while(enet_host_service(server_or_client, &event, 0) > 0)
 	{
         if(event.type == ENET_EVENT_TYPE_CONNECT) // received a connection from a client
         {
             printf ("A new client connected from %x:%u. ConnectID: %u\n", event.peer->address.host, event.peer->address.port, event.peer->connectID);
 			addClient(event.peer);
             enet_packet_destroy(event.packet);
-            return ENET_EVENT_TYPE_CONNECT;
+            message = ENET_EVENT_TYPE_CONNECT;
+            //return ENET_EVENT_TYPE_CONNECT;
         }
 
         if(event.type == ENET_EVENT_TYPE_RECEIVE)
@@ -182,7 +189,8 @@ int network_getEvents(char *storeData)
             strcpy(storeData, event.packet->data);
             //storeSendingPeer = event.peer; // store the peer so we know who sent the data
             enet_packet_destroy(event.packet);
-            return ENET_EVENT_TYPE_RECEIVE;
+            message = ENET_EVENT_TYPE_RECEIVE;
+            //return ENET_EVENT_TYPE_RECEIVE;
         }
 
         if(event.type == ENET_EVENT_TYPE_DISCONNECT)
@@ -192,17 +200,19 @@ int network_getEvents(char *storeData)
 			/* Reset the peer's client information. */
 			event.peer -> data = NULL;
             enet_packet_destroy(event.packet);
-            return ENET_EVENT_TYPE_DISCONNECT;
+            message = ENET_EVENT_TYPE_DISCONNECT;
+            //return ENET_EVENT_TYPE_DISCONNECT;
         }		
 	}
+    return message;
 }
 
 // if client - disconnects client from server
 // if server - closes the server
 int network_disconnect()
 {
-    // check that we are not a server
-    if(b_server_or_client != n_notSet)
+    // if we are not a server or a client then there is nothing to disconnect from
+    if(b_server_or_client == n_notSet)
     {
         return b_server_or_client;
     }
@@ -298,4 +308,19 @@ void removeClient(ENetPeer *removeClient)
         }
         num_clients--;
     }
+}
+
+unsigned int network_getEventListLength()
+{
+    if(b_server_or_client == n_notSet)
+    {
+        return 0;
+    }
+
+    iterator = (iterator + 1)%10;
+    num_averageEvents -= num_events[iterator];
+    num_events[iterator] = enet_list_size(&(server_or_client->dispatchQueue));
+    num_averageEvents += num_events[iterator];
+
+    return num_averageEvents/10;
 }

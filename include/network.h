@@ -41,4 +41,8 @@ void network_deinitialize();
 */
 int network_serverOrClient();
 
+// get a number of how many events we have on the backlog we haven't processed yet
+unsigned int network_getEventListLength();
+
+
 #endif
