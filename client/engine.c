@@ -1,8 +1,9 @@
 #include "engine.h"
 
 Vector2 mousePos = {0};
-char data[MAX_DATA_LENGTH] = {'\0'};
-char *token = NULL;
+char data[MAX_DATA_LENGTH] = {0}; // data we receive
+char buffer[MAX_DATA_LENGTH] = {0}; // data we are preparing to send out
+int buffer_length = 0; // length of the data we are preparing to send out
 Vector2 p2MousePos = {0};
 GameState gameState = menu;
 
@@ -10,11 +11,11 @@ int errorState = 0;
 
 int eventType = 0;
 
+
 void engine_initialize()
 {
     Vector2 mousePos = {0};
     char data[MAX_DATA_LENGTH] = {'\0'};
-    char *token = NULL;
     Vector2 p2MousePos = {0};
     GameState gameState = menu;
     errorState = 0;
@@ -25,28 +26,22 @@ void engine_update()
     if(gameState == game)
     {
         mousePos = GetMousePosition();
-        network_sendData(TextFormat("%.0f#%.0f", mousePos.x, mousePos.y));
+        memcpy(buffer + buffer_length, &(mousePos.x), sizeof(float));
+        buffer_length += sizeof(float);
+        memcpy(buffer + buffer_length, &(mousePos.y), sizeof(float));
+        buffer_length += sizeof(float);
+
+        network_sendData(buffer, sizeof(float) * 2);
+        buffer_length = 0;
         eventType = network_getEvents(data);
         if(eventType == 3)
         {
-            token = strtok(data, "#");
-            p2MousePos.x = atof(token);
-            token = strtok(NULL, "#");
-            p2MousePos.y = atof(token);
-            while(token != NULL)
-            {
-                token = strtok(NULL, "#");
-            }
-        }
-        else if(eventType == 2)
-        {
-            if(network_serverOrClient() == -2)
-            {
-                network_disconnect();
-                gameState = menu;
-            }
-        }
-        
+            memcpy(&(p2MousePos.x), data + buffer_length, sizeof(float));
+            buffer_length += sizeof(float);
+            memcpy(&(p2MousePos.y), data + buffer_length, sizeof(float));
+            buffer_length += sizeof(float);
+            buffer_length = 0;
+        }        
     }
 }
 
@@ -56,18 +51,17 @@ void engine_draw()
     {
         if(drawButton((Rectangle){50, GetScreenHeight()/2, 160, 30}, "Become Client", GetFontDefault(), 20))
         {
-            if(network_connect("192.168.1.27", 1234) == 1)
+            if(network_connect("127.0.0.1", 1234) == 1)
             {
                 gameState = game;
             }
         }
         if(drawButton((Rectangle){50, GetScreenHeight()/2 - 60, 160, 30}, "Become Server", GetFontDefault(), 20))
         {
-            if((errorState = network_createServer("192.168.1.27", 1234)) == 1)
+            if((errorState = network_createServer("127.0.0.1", 1234)) == 1)
             {
                 gameState = game;
             }
-            DrawText(TextFormat("Value: %d", errorState), 0, 40, 20, RED);
         }
     }
     else if(gameState == game)
@@ -84,7 +78,6 @@ void engine_draw()
         }
     }
     DrawFPS(0,0);
-    DrawText(TextFormat("Value: %d", network_serverOrClient()), 0, 60, 20, RED);
 }
 
 void resetString(char *string)

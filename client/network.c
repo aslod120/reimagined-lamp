@@ -29,6 +29,10 @@ unsigned int num_events[10] = {0};
 unsigned int num_averageEvents = 0;
 int iterator = 0;
 
+// the buffer for storing and sending packets
+char buffer[sizeof(char) * 255] = {0};
+unsigned int buffer_size = 0;
+
 // keeping track if we are a server or a client
 /*
     0 - not set yet
@@ -150,9 +154,9 @@ int network_connect(const char *IPAddress, const int port)
 }
 
 // send data
-void network_sendData(const char *data)
+void network_sendData(const char *data, unsigned int dataLength)
 {
-    packet = enet_packet_create(data, strlen(data) + 1, ENET_PACKET_FLAG_RELIABLE);
+    packet = enet_packet_create(data, dataLength + 1, ENET_PACKET_FLAG_RELIABLE);
     if(b_server_or_client == -1) // we are a server sending info to our clients
     {
         enet_host_broadcast(server_or_client, 1, packet);
@@ -161,6 +165,19 @@ void network_sendData(const char *data)
     {
         enet_peer_send(peer, 0, packet);
     }
+}
+
+// call to store the packets and then send them
+// WIP
+void network_storePacket(const void *data, unsigned int dataSize)
+{
+    memcpy(buffer + buffer_size, data, dataSize);
+    buffer_size += dataSize;
+}
+// send the packet we just stored
+void network_sendPacket()
+{
+    network_sendData(buffer, buffer_size);
 }
 
 // receive data
@@ -186,7 +203,7 @@ int network_getEvents(char *storeData)
         if(event.type == ENET_EVENT_TYPE_RECEIVE)
         {
             // fill the dataStorage with the new data
-            strcpy(storeData, event.packet->data);
+            memcpy(storeData, event.packet->data, sizeof(char) * (event.packet->dataLength - 1));
             //storeSendingPeer = event.peer; // store the peer so we know who sent the data
             enet_packet_destroy(event.packet);
             message = ENET_EVENT_TYPE_RECEIVE;

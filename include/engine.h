@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "UIButtons.h"
-#define MAX_DATA_LENGTH 80
+#define MAX_DATA_LENGTH (sizeof(float)*2)
 
 typedef enum GameState
 {

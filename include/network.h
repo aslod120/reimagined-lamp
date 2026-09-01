@@ -16,7 +16,7 @@ int network_connect(const char *IPAddress, const int port);
 // send data
 // if we are a client then we are sending data to the server
 // if we are a server then we are broadcasting data out to all clients
-void network_sendData(const char *data);
+void network_sendData(const char *data, unsigned int dataLength);
 
 // receive data
 // needs to be ran every frame
