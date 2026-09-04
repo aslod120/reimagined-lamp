@@ -29,9 +29,11 @@ unsigned int num_events[10] = {0};
 unsigned int num_averageEvents = 0;
 int iterator = 0;
 
+/*
 // the buffer for storing and sending packets
 char buffer[sizeof(char) * 255] = {0};
 unsigned int buffer_size = 0;
+*/
 
 // keeping track if we are a server or a client
 /*
@@ -169,6 +171,7 @@ void network_sendData(const char *data, unsigned int dataLength)
 
 // call to store the packets and then send them
 // WIP
+/*
 void network_storePacket(const void *data, unsigned int dataSize)
 {
     memcpy(buffer + buffer_size, data, dataSize);
@@ -179,7 +182,7 @@ void network_sendPacket()
 {
     network_sendData(buffer, buffer_size);
 }
-
+*/
 // receive data
 // needs to be ran every frame
 // returns the following

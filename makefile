@@ -5,7 +5,7 @@ all: main run
 
 main:
 	gcc ./client/*.c -o client.exe $(CCFLAGS)
-	gcc ./client/*.c -o client2.exe $(CCFLAGS)
+#gcc ./client/*.c -o client2.exe $(CCFLAGS)
 #gcc ./server/*.c -o server.exe $(CSFLAGS)
 
 run:
