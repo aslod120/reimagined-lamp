@@ -1,4 +1,4 @@
-CCFLAGS = -I include/ -L lib/ -lraylib -lopengl32 -lgdi32 -lwinmm -mwindows -lws2_32
+CCFLAGS = -I include/ -L lib/ -lraylib -lopengl32 -lgdi32 -lwinmm -lws2_32 #-mwindows
 CSFLAGS = -I include/ -lwinmm -lws2_32
 
 all: main run

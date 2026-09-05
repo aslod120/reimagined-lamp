@@ -1,7 +1,7 @@
 #include "engine.h"
 #include <math.h>
 #include "player.h"
-#define MAX_ENV 20
+#define MAX_ENV 45
 
 int signNumf(float num);
 
@@ -40,14 +40,43 @@ int main(void)
     Rectangle environment[MAX_ENV] = {0};
     for(int i = 0; i < MAX_ENV; i++)
     {
-        environment[i].height = GetRandomValue(10, 50);
-        environment[i].width = GetRandomValue(10, 50);
+        environment[i].height = GetRandomValue(10, 80);
+        environment[i].width = GetRandomValue(10, 80);
         environment[i].x = GetRandomValue(0, screenWidth - environment[i].width);
         environment[i].y = GetRandomValue(0, screenHeight - environment[i].height);
     }
 
     int sign = 0;
-    bool colliding = false;
+    bool xColliding = false;
+    bool yColliding = false;
+
+    bool playerColliding = false;
+    do
+    {
+        playerColliding = false;
+        player.position.x = GetRandomValue(player.size/2, screenWidth - player.size/2);
+        player.position.y = GetRandomValue(player.size/2, screenHeight - player.size/2);
+        for(int i = 0; i < MAX_ENV; i++)
+        {
+            if(CheckCollisionRecs(environment[i], (Rectangle){player.position.x - player.size/2, player.position.y - player.size/2, player.size, player.size}))
+            {
+                playerColliding = true;
+                break;
+            }
+        }
+    } while (playerColliding == true);
+
+    // load the shader
+    Shader shader = LoadShader(0, "./include/shaders/shader.fs");
+    Image whiteImage = GenImageColor(screenWidth, screenHeight, WHITE);
+    Texture2D dummyTex = LoadTextureFromImage(whiteImage);
+    UnloadImage(whiteImage);
+
+    /*  example on how to set a uniform value in the shader
+        unsigned int wLoc = GetShaderLocation(raytracing, "screenWidth");
+        float sw = (float)GetScreenWidth();
+        SetShaderValue(raytracing, wLoc, &sw, SHADER_UNIFORM_FLOAT);
+    */
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -83,29 +112,59 @@ int main(void)
 
         while(player.newPos.x != 0 || player.newPos.y != 0)
         {
+            xColliding = false;
+            yColliding = false;
             for(int i = 0; i < MAX_ENV; i++)
             {
-                if(CheckCollisionRecs(environment[i], (Rectangle){(player.position.x - player.size/2) + signNumf(player.newPos.x), (player.position.y - player.size/2) + signNumf(player.newPos.y), player.size, player.size}))
+                // check x collision
+                if(CheckCollisionRecs(environment[i], (Rectangle){(player.position.x - player.size/2) + signNumf(player.newPos.x), (player.position.y - player.size/2), player.size, player.size}))
                 {
-                    colliding = true;
-                    break;
+                    xColliding = true;
+                }
+                // check y collision
+                if(CheckCollisionRecs(environment[i], (Rectangle){(player.position.x - player.size/2), (player.position.y - player.size/2) + signNumf(player.newPos.y), player.size, player.size}))
+                {
+                    yColliding = true;
                 }
             }
-            if(colliding == false)
+            if(xColliding == false)
             {
                 sign = signNumf(player.newPos.x);
                 player.position.x += sign;
                 player.newPos.x -= sign;
+            }
+            if(yColliding == false)
+            {
                 sign = signNumf(player.newPos.y);
                 player.position.y += sign;
                 player.newPos.y -= sign;
             }
-            else
+            if(xColliding == true)
             {
                 player.newPos.x = 0;
+            }
+            if(yColliding == true)
+            {
                 player.newPos.y = 0;
             }
-            colliding = false;
+        }
+
+        // player can't escape through the border of the screen
+        if(player.position.x - player.size/2 < 0)
+        {
+            player.position.x = player.size/2;
+        }
+        else if(player.position.x + player.size/2 > screenWidth)
+        {
+            player.position.x = screenWidth - player.size/2;
+        }
+        if(player.position.y - player.size/2 < 0)
+        {
+            player.position.y = player.size/2;
+        }
+        else if(player.position.y + player.size/2 > screenHeight)
+        {
+            player.position.y = screenHeight - player.size/2;
         }
 
 
@@ -114,6 +173,7 @@ int main(void)
         BeginDrawing();
 
             ClearBackground(BLACK);
+
             DrawRectangle(player.position.x - player.size/2,
                 player.position.y - player.size/2, 
                 player.size, 
@@ -125,6 +185,10 @@ int main(void)
                 DrawRectangleRec(environment[i], GREEN);
             }
 
+            BeginShaderMode(shader);
+            DrawTexture(dummyTex, 0, 0, WHITE);
+            EndShaderMode();
+
             //engine_draw();
 
         EndDrawing();
@@ -134,6 +198,8 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
+    UnloadTexture(dummyTex);
+    UnloadShader(shader);
     CloseWindow();        // Close window and OpenGL context
     //network_deinitialize();
     //--------------------------------------------------------------------------------------
