@@ -12,4 +12,6 @@ typedef struct Character
     float speed;
 }Character;
 
+Vector2 getDistance(float speed);
+
 #endif

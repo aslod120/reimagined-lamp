@@ -1,24 +1,51 @@
 #version 330
 
-precision mediump float;
+// Input fragment attributes (from fragment shader)
+in vec2 fragTexCoord;
+in vec4 fragColor;
 
-// Input vertex attributes (from vertex shader)
-varying vec2 fragTexCoord;
-varying vec4 fragColor;
-
-// Input uniform values
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;
-
-// output
+// Output fragment color
 out vec4 finalColor;
 
-// NOTE: Add your custom variables here
+bool CheckCollisionPointTriangle(vec2 point, vec2 p1, vec2 p2, vec2 p3);
+
+
+
+uniform vec2 triangle[3];
 
 void main()
 {
-    float gradient = fragTexCoord.x;
 
-    // Calculate final fragment color
-    finalColor = vec4(vec3(fragTexCoord.x), fragColor.a);
+    // Get the position of the current fragment (screen coordinates!)
+    vec2 pos = vec2(gl_FragCoord.x, gl_FragCoord.y);
+    float alpha = 1.0;
+    
+    if(CheckCollisionPointTriangle(pos, triangle[0], triangle[1], triangle[2]) == true)
+    {
+        alpha = 0.0;
+    }
+    else
+    {
+        alpha = 1.0;
+    }
+
+    
+    finalColor = vec4(0, 0, 0, alpha);
+}
+
+bool CheckCollisionPointTriangle(vec2 point, vec2 p1, vec2 p2, vec2 p3)
+{
+    bool collision = false;
+
+    float alpha = ((p2.y - p3.y)*(point.x - p3.x) + (p3.x - p2.x)*(point.y - p3.y)) /
+                  ((p2.y - p3.y)*(p1.x - p3.x) + (p3.x - p2.x)*(p1.y - p3.y));
+
+    float beta = ((p3.y - p1.y)*(point.x - p3.x) + (p1.x - p3.x)*(point.y - p3.y)) /
+                 ((p2.y - p3.y)*(p1.x - p3.x) + (p3.x - p2.x)*(p1.y - p3.y));
+
+    float gamma = 1.0f - alpha - beta;
+
+    if ((alpha > 0) && (beta > 0) && (gamma > 0)) collision = true;
+
+    return collision;
 }
