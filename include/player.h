@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include <math.h>
+#include "environment.h"
 
 typedef struct Character
 {
@@ -12,6 +13,10 @@ typedef struct Character
     float speed;
 }Character;
 
+Character playerInitialize(Vector2 startingPos, float size, float speed);
+Vector2 playerSpawn(Character player);
+void playerDraw(Character player, Color color);
 Vector2 getDistance(float speed);
+Character playerMove(Character player, float screenWidth, float screenHeight);
 
 #endif
