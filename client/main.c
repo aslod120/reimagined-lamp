@@ -3,6 +3,7 @@
 #include "raymath.h"
 #include "player.h"
 #include "environment.h"
+#include "shooting.h"
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -29,8 +30,9 @@ int main(void)
 
     //engine_initialize();
     environmentInitialize();
+    bulletInitialize(1, 8, 500);
 
-    Character player = playerInitialize((Vector2){screenWidth/2, screenHeight/2}, 10, 50);
+    Character player = playerInitialize(10, (Vector2){screenWidth/2, screenHeight/2}, 10, 50);
     Vector2 newPlayerPos = {0}; // for passing info to the shader
 
     float deltaTime = 0;
@@ -53,7 +55,7 @@ int main(void)
     */
 
     // temp other player location and such
-    Character otherPlayer = playerInitialize((Vector2){0,0}, 10, 0);
+    Character otherPlayer = playerInitialize(10, (Vector2){0,0}, 10, 0);
     otherPlayer.position = playerSpawn(otherPlayer);
 
     // load the shader
@@ -83,6 +85,13 @@ int main(void)
 
         //engine_update();
         player = playerMove(player, screenWidth, screenHeight);
+        
+        // get input to shoot
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            bulletSpawn(mouseDir, player.position);
+        }
+        bulletUpdate();
         
         // setup vision cone area
         visionPoints[0] = player.position;
@@ -115,11 +124,16 @@ int main(void)
             playerDraw(otherPlayer, RED);
 
             environmentDraw(player.position);
+            bulletDraw(BLUE);
+            
             
             // draw the outline
             BeginShaderMode(shader);
             DrawRectangle(0, 0, screenWidth, screenHeight, WHITE);
             EndShaderMode();
+
+            // UI ---
+            DrawText(TextFormat("bullets: %d", getNumBullets()), 0, 0, 20, GREEN);
             
             //engine_draw();
 

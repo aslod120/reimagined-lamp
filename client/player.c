@@ -2,9 +2,11 @@
 
 int signNumf(float num);
 
-Character playerInitialize(Vector2 startingPos, float size, float speed)
+Character playerInitialize(float health, Vector2 startingPos, float size, float speed)
 {
     Character player = {0};
+    player.id = 0;
+    player.health = health;
     player.position = startingPos;
     player.size = size;
     player.speed = speed;
@@ -144,4 +146,16 @@ Character playerMove(Character player, float screenWidth, float screenHeight)
 int signNumf(float num)
 {
     return (num > 0) - (num < 0);
+}
+
+bool playerHurt(Character player, float damage)
+{
+    // return false if player is still alive
+    // otherwise, return true
+    player.health -= damage;
+    if(player.health <= 0)
+    {
+        return true;
+    }
+    return false;
 }
